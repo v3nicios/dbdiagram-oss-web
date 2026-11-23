@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DBDiagram OSS Studio — Editor DBML &amp; Diagramas ER</title>
+  <meta
+    name="description"
+    content="Editor visual open-source de diagramas de banco de dados (DBML/ERD) com controle exato de tamanho de fonte na visualização e exportação (SVG, PNG, PDF, SQL)."
+  />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Top Toolbar -->
+    <header class="topbar">
+      <div class="topbar-group topbar-brand">
+        <div class="brand-logo" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <rect x="2.5" y="3" width="8.5" height="7" rx="1.8" stroke="currentColor" stroke-width="1.8" />
+            <rect x="13" y="14" width="8.5" height="7" rx="1.8" stroke="currentColor" stroke-width="1.8" />
+            <path d="M11 6.5H15.5C16.6 6.5 17.5 7.4 17.5 8.5V14" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round" />
+            <circle cx="17.5" cy="17.5" r="1.3" fill="#38bdf8" />
+          </svg>
+        </div>
+        <input
+          id="input-project-name"
+          class="project-name-input"
+          type="text"
+          value="E-commerce Completo"
+          aria-label="Nome do projeto"
+        />
+        <button
+          id="btn-samples"
+          type="button"
+          class="btn btn-ghost btn-sm"
+          data-popover-trigger="true"
+        >
+          <span data-i18n="samples">Exemplos</span>
+          <span class="caret">▾</span>
+        </button>
+      </div>
+
+      <!-- Core Feature: Diagram Font Control -->
+      <div class="topbar-group font-control-pill" data-i18n-title="diagramFontTooltip">
+        <span class="font-pill-label" data-i18n="diagramFontLabel">Fonte do Diagrama</span>
+        <div class="stepper">
+          <button id="btn-font-dec" type="button" class="stepper-btn" aria-label="Diminuir fonte">−</button>
+          <div class="stepper-input-wrap">
+            <input
+              id="input-font-size"
+              type="number"
+              min="8"
+              max="36"
+              step="1"
+              value="14"
+              aria-label="Tamanho da fonte do diagrama em pixels"
+            />
+            <span class="unit">px</span>
+          </div>
+          <button id="btn-font-inc" type="button" class="stepper-btn" aria-label="Aumentar fonte">+</button>
+        </div>
+        <button
+          id="btn-typography"
+          type="button"
+          class="btn btn-subtle btn-sm"
+          data-popover-trigger="true"
+        >
+          <span data-i18n="typographyBtn">Tipografia</span>
+          <span class="caret">▾</span>
+        </button>
+      </div>
+
+      <!-- Diagram & Actions -->
+      <div class="topbar-group topbar-actions">
+        <button
+          id="btn-auto-layout"
+          type="button"
+          class="btn btn-ghost btn-sm"
+          data-i18n-title="autoLayoutTooltip"
+        >
+          <span class="btn-icon">⊞</span>
+          <span data-i18n="autoLayout">Organizar</span>
+        </button>
+
+        <button
+          id="btn-view-options"
+          type="button"
+          class="btn btn-ghost btn-sm"
+          data-popover-trigger="true"
+        >
+          <span data-i18n="viewOptions">Visualização</span>
+          <span class="caret">▾</span>
+        </button>
+
+        <button
+          id="btn-open-search"
+          type="button"
+          class="btn btn-ghost btn-sm"
+          data-i18n-title="searchTables"
+        >
+          <span class="btn-icon">⌕</span>
+          <span class="hide-md">Ctrl+K</span>
+        </button>
+
+        <div class="topbar-divider"></div>
+
+        <button id="btn-open-import" type="button" class="btn btn-ghost btn-sm">
+          <span data-i18n="importBtn">Importar</span>
+        </button>
+
+        <button id="btn-open-export" type="button" class="btn btn-primary btn-sm">
+          <span data-i18n="exportBtn">Exportar</span>
+        </button>
+
+        <button
+          id="btn-theme-toggle"
+          type="button"
+          class="btn btn-icon-only btn-sm"
+          data-i18n-title="themeToggleTooltip"
+        >
+          <span id="theme-icon">☀️</span>
+        </button>
+
+        <button
+          id="btn-lang-toggle"
+          type="button"
+          class="btn btn-ghost btn-sm"
+          data-i18n-title="langToggleTooltip"
+        >
+          <span id="lang-badge">PT</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main id="workspace" class="workspace">
+      <!-- Left: DBML Editor -->
+      <section id="editor-pane" class="editor-pane">
+        <div class="pane-header">
+          <div class="pane-header-left">
+            <span class="pane-title" data-i18n="editorTitle">Editor DBML</span>
+            <span id="syntax-status" class="syntax-badge is-valid">✓ Válido</span>
+          </div>
+          <div class="pane-header-right">
+            <div class="mini-font-ctrl" title="Editor Font Size">
+              <button id="btn-ed-small-dec" type="button" class="btn btn-ghost btn-xs">A−</button>
+              <button id="btn-ed-small-inc" type="button" class="btn btn-ghost btn-xs">A+</button>
+            </div>
+            <button id="btn-format-dbml" type="button" class="btn btn-ghost btn-xs" data-i18n="formatDbml">
+              Formatar
+            </button>
+            <button id="btn-copy-dbml" type="button" class="btn btn-ghost btn-xs" data-i18n="copyDbml">
+              Copiar
+            </button>
+          </div>
+        </div>
+
+        <div id="editor-errors" class="editor-errors" hidden></div>
+
+        <div class="code-editor-container">
+          <div id="editor-gutter" class="editor-gutter" aria-hidden="true"></div>
+          <div class="editor-surface">
+            <pre id="editor-highlight" class="editor-highlight" aria-hidden="true"></pre>
+            <textarea
+              id="dbml-textarea"
+              class="dbml-textarea"
+              spellcheck="false"
+              autocomplete="off"
+              autocapitalize="off"
+              aria-label="Editor DBML"
+            ></textarea>
+          </div>
+        </div>
+
+        <footer class="editor-statusbar">
+          <div class="status-counts">
+            <span id="status-tables">0 tabelas</span>
+            <span>·</span>
+            <span id="status-refs">0 relações</span>
+            <span>·</span>
+            <span id="status-enums">0 enums</span>
+          </div>
+          <div id="status-cursor" class="status-cursor">Ln 1, Col 1</div>
+        </footer>
+      </section>
+
+      <!-- Resizable Divider -->
+      <div id="split-resizer" class="split-resizer" role="separator" aria-orientation="vertical"></div>
+
+      <!-- Right: Interactive Diagram Canvas -->
+      <section id="canvas-wrap" class="canvas-wrap">
+        <svg id="diagram-svg" class="diagram-svg">
+          <g id="diagram-viewport">
+            <g id="layer-groups"></g>
+            <g id="layer-refs"></g>
+            <g id="layer-tables"></g>
+            <g id="layer-enums"></g>
+          </g>
+        </svg>
+
+        <!-- Empty State -->
+        <div id="canvas-empty" class="canvas-empty" hidden>
+          <div class="empty-card">
+            <h3 data-i18n="emptyDiagramTitle">Nenhuma tabela para exibir</h3>
+            <p data-i18n="emptyDiagramDesc">
+              Escreva blocos Table { ... } no editor DBML ou carregue um exemplo no menu superior.
+            </p>
+          </div>
+        </div>
+
+        <!-- Floating Canvas Controls -->
+        <div class="canvas-floating-bar">
+          <button id="btn-toggle-editor" type="button" class="float-btn" data-i18n-title="toggleEditor">
+            ◧
+          </button>
+          <div class="float-sep"></div>
+          <button id="btn-zoom-out" type="button" class="float-btn" aria-label="Zoom Out">−</button>
+          <button id="btn-zoom-reset" type="button" class="float-btn float-zoom-val" data-i18n-title="zoomReset">
+            <span id="zoom-label">100%</span>
+          </button>
+          <button id="btn-zoom-in" type="button" class="float-btn" aria-label="Zoom In">+</button>
+          <div class="float-sep"></div>
+          <button id="btn-zoom-fit" type="button" class="float-btn" data-i18n-title="zoomFit">
+            ⛶
+          </button>
+        </div>
+
+        <!-- Hover Tooltip -->
+        <div id="canvas-tooltip" class="canvas-tooltip" hidden></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Popover: Samples -->
+  <div id="popover-samples" class="popover-panel popover-menu" hidden>
+    <button type="button" class="menu-item" data-sample="ecommerce" data-i18n="sampleEcommerce">
+      E-commerce Completo
+    </button>
+    <button type="button" class="menu-item" data-sample="saas" data-i18n="sampleSaas">
+      SaaS Multi-tenant
+    </button>
+    <button type="button" class="menu-item" data-sample="blog" data-i18n="sampleBlog">
+      Blog &amp; Comunidade
+    </button>
+  </div>
+
+  <!-- Popover: Typography -->
+  <div id="popover-typography" class="popover-panel popover-card" hidden>
+    <div class="popover-title" data-i18n="typographyTitle">Tipografia do Diagrama</div>
+
+    <div class="field-block">
+      <div class="field-label-row">
+        <span data-i18n="fontSize">Tamanho da fonte</span>
+        <strong id="pop-font-size-val">14px</strong>
+      </div>
+      <input id="range-font-size" type="range" min="8" max="36" step="1" value="14" />
+      <div class="preset-chips">
+        <button type="button" class="font-preset-btn" data-size="10">10px</button>
+        <button type="button" class="font-preset-btn" data-size="12">12px</button>
+        <button type="button" class="font-preset-btn" data-size="14">14px</button>
+        <button type="button" class="font-preset-btn" data-size="16">16px</button>
+        <button type="button" class="font-preset-btn" data-size="18">18px</button>
+        <button type="button" class="font-preset-btn" data-size="20">20px</button>
+        <button type="button" class="font-preset-btn" data-size="24">24px</button>
+        <button type="button" class="font-preset-btn" data-size="28">28px</button>
+      </div>
+    </div>
+
+    <div class="field-block">
+      <label class="field-label" for="select-font-family" data-i18n="fontFamily">Família da fonte</label>
+      <select id="select-font-family" class="form-select">
+        <option value="sans" data-i18n="fontSans">Sans-serif (Sistema / Inter)</option>
+        <option value="mono" data-i18n="fontMono">Monospace (Código)</option>
+        <option value="classic" data-i18n="fontClassic">Clássica (Arial / Helvetica)</option>
+      </select>
+    </div>
+
+    <div class="field-block">
+      <label class="field-label" for="select-header-scale" data-i18n="headerScale">Tamanho do título</label>
+      <select id="select-header-scale" class="form-select">
+        <option value="1.05" data-i18n="scaleCompact">Compacto (1.05x)</option>
+        <option value="1.15" data-i18n="scaleBalanced">Balanceado (1.15x)</option>
+        <option value="1.28" data-i18n="scaleLarge">Destaque (1.28x)</option>
+      </select>
+    </div>
+
+    <div class="field-block">
+      <div class="field-label-row">
+        <span data-i18n="editorFontSize">Fonte do editor</span>
+        <div class="mini-stepper">
+          <button id="btn-editor-font-dec" type="button" class="stepper-btn">−</button>
+          <span id="editor-font-val">14px</span>
+          <button id="btn-editor-font-inc" type="button" class="stepper-btn">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-callout" data-i18n="exportSyncHint">
+      Este exato tamanho será usado ao exportar SVG, PNG e PDF.
+    </div>
+  </div>
+
+  <!-- Popover: View Options -->
+  <div id="popover-view" class="popover-panel popover-card" hidden>
+    <div class="popover-title" data-i18n="viewOptions">Visualização</div>
+
+    <div class="field-block">
+      <label class="field-label" for="select-line-style" data-i18n="lineStyle">Estilo das linhas</label>
+      <select id="select-line-style" class="form-select">
+        <option value="orthogonal" data-i18n="lineOrthogonal">Ortogonal (Cotovelo)</option>
+        <option value="bezier" data-i18n="lineBezier">Curva (Bezier)</option>
+      </select>
+    </div>
+
+    <label class="checkbox-row">
+      <input id="chk-show-types" type="checkbox" checked />
+      <span data-i18n="showTypes">Mostrar tipos das colunas</span>
+    </label>
+    <label class="checkbox-row">
+      <input id="chk-show-badges" type="checkbox" checked />
+      <span data-i18n="showBadges">Mostrar badges (PK, FK, UQ, NN)</span>
+    </label>
+    <label class="checkbox-row">
+      <input id="chk-show-enums" type="checkbox" checked />
+      <span data-i18n="showEnums">Mostrar blocos Enum no diagrama</span>
+    </label>
+    <label class="checkbox-row">
+      <input id="chk-show-groups" type="checkbox" checked />
+      <span data-i18n="showGroups">Mostrar grupos (TableGroup)</span>
+    </label>
+    <label class="checkbox-row">
+      <input id="chk-show-grid" type="checkbox" checked />
+      <span data-i18n="showGrid">Mostrar grade de fundo</span>
+    </label>
+
+    <button id="btn-reset-routes" type="button" class="btn btn-subtle btn-sm full-width mt-8" data-i18n="resetRoutes">
+      Resetar curvas das linhas
+    </button>
+  </div>
+
+  <!-- Popover: Table Header Color -->
+  <div id="popover-header-color" class="popover-panel popover-card popover-color" hidden>
+    <div class="popover-title" data-i18n="headerColorPick">Cor do cabeçalho da tabela</div>
+    <div id="header-color-swatches" class="swatch-grid"></div>
+    <div class="color-custom-row">
+      <label class="custom-color-label">
+        <span data-i18n="customColor">Personalizada</span>
+        <input id="input-custom-header-color" type="color" value="#2563eb" />
+      </label>
+      <button id="btn-reset-header-color" type="button" class="btn btn-ghost btn-xs">Reset</button>
+    </div>
+  </div>
+
+  <!-- Modal: Export -->
+  <div id="modal-export" class="modal-backdrop" hidden>
+    <div class="modal-card modal-lg" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <div>
+          <h2 data-i18n="exportTitle">Exportar Diagrama &amp; Código</h2>
+          <div class="export-font-pill">
+            <span data-i18n="exportFontBadge">Fonte aplicada na exportação:</span>
+            <strong id="export-font-summary">14px · Sans-serif</strong>
+          </div>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="modal-export" aria-label="Fechar">✕</button>
+      </div>
+
+      <div class="modal-tabs">
+        <button type="button" class="export-tab-btn is-active" data-tab="png">PNG</button>
+        <button type="button" class="export-tab-btn" data-tab="svg">SVG</button>
+        <button type="button" class="export-tab-btn" data-tab="pdf">PDF</button>
+        <button type="button" class="export-tab-btn" data-tab="sql">SQL</button>
+        <button type="button" class="export-tab-btn" data-tab="dbml">DBML</button>
+        <button type="button" class="export-tab-btn" data-tab="json">JSON</button>
+      </div>
+
+      <div class="modal-body">
+        <div id="export-visual-options" class="export-options-grid">
+          <div class="field-block">
+            <label class="field-label" for="select-export-theme" data-i18n="exportTheme">Fundo / Tema</label>
+            <select id="select-export-theme" class="form-select">
+              <option value="current" data-i18n="exportThemeCurrent">Tema atual</option>
+              <option value="light" data-i18n="exportThemeLight">Claro (Fundo branco)</option>
+              <option value="dark" data-i18n="exportThemeDark">Escuro</option>
+              <option value="transparent" data-i18n="exportThemeTransparent">Transparente (PNG/SVG)</option>
+            </select>
+          </div>
+
+          <div id="export-png-scale-wrap" class="field-block">
+            <label class="field-label" for="select-export-scale" data-i18n="exportScale">Resolução PNG</label>
+            <select id="select-export-scale" class="form-select">
+              <option value="1" data-i18n="exportScale1x">1x — Tamanho Real (1:1 exato)</option>
+              <option value="2" data-i18n="exportScale2x">2x — Alta Resolução (Retina)</option>
+              <option value="3" data-i18n="exportScale3x">3x — Ultra HD (Impressão)</option>
+            </select>
+          </div>
+
+          <div class="export-dims-box">
+            <span data-i18n="exportDimensions">Dimensões de saída:</span>
+            <strong id="export-dimensions-val">0 × 0 px</strong>
+          </div>
+        </div>
+
+        <div id="export-sql-options" class="export-options-grid" hidden>
+          <div class="field-block">
+            <label class="field-label" for="select-sql-dialect" data-i18n="exportSqlDialect">Dialeto SQL</label>
+            <select id="select-sql-dialect" class="form-select">
+              <option value="postgresql">PostgreSQL</option>
+              <option value="mysql">MySQL</option>
+              <option value="sqlite">SQLite</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="export-visual-preview-wrap" class="preview-wrap">
+          <div class="preview-caption" data-i18n="exportPreview">Pré-visualização exata da exportação</div>
+          <div id="export-preview-stage" class="export-preview-stage"></div>
+        </div>
+
+        <div id="export-code-preview-wrap" class="code-preview-wrap" hidden>
+          <pre id="export-code-preview" class="export-code-preview"></pre>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close-modal="modal-export" data-i18n="close">
+          Fechar
+        </button>
+        <div class="modal-footer-right">
+          <button id="btn-export-copy" type="button" class="btn btn-subtle" data-i18n="exportCopy">
+            Copiar
+          </button>
+          <button id="btn-export-download" type="button" class="btn btn-primary" data-i18n="exportDownload">
+            Baixar Arquivo
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Import -->
+  <div id="modal-import" class="modal-backdrop" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 data-i18n="importTitle">Importar Esquema</h2>
+        <button type="button" class="modal-close" data-close-modal="modal-import" aria-label="Fechar">✕</button>
+      </div>
+
+      <div class="modal-tabs">
+        <button type="button" class="import-tab-btn is-active" data-import-tab="sql" data-i18n="importTabSql">
+          Importar SQL (DDL)
+        </button>
+        <button type="button" class="import-tab-btn" data-import-tab="file" data-i18n="importTabFile">
+          Abrir Arquivo (.dbml, .sql, .json)
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <p class="warn-hint" data-i18n="importReplaceWarn">O conteúdo atual do editor será substituído.</p>
+
+        <div id="import-panel-sql">
+          <textarea
+            id="textarea-import-sql"
+            class="import-sql-textarea"
+            data-i18n-placeholder="importSqlPlaceholder"
+            placeholder="Cole aqui seus comandos CREATE TABLE, CREATE TYPE, ALTER TABLE..."
+          ></textarea>
+          <div class="mt-12 flex-end">
+            <button id="btn-convert-sql" type="button" class="btn btn-primary" data-i18n="importSqlAction">
+              Converter SQL para DBML
+            </button>
+          </div>
+        </div>
+
+        <div id="import-panel-file" hidden>
+          <div id="import-dropzone" class="import-dropzone">
+            <div class="drop-icon">📂</div>
+            <p data-i18n="importFileDrop">
+              Arraste um arquivo .dbml, .sql ou .json aqui ou clique para selecionar
+            </p>
+            <button type="button" class="btn btn-subtle btn-sm" data-i18n="importChooseFile">
+              Selecionar arquivo
+            </button>
+            <input id="input-import-file" type="file" accept=".dbml,.sql,.json,.txt" hidden />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Quick Search (Ctrl+K) -->
+  <div id="modal-search" class="modal-backdrop" hidden>
+    <div class="modal-card modal-sm" role="dialog" aria-modal="true">
+      <div class="search-input-wrap">
+        <span class="search-icon">⌕</span>
+        <input
+          id="input-search-table"
+          type="text"
+          data-i18n-placeholder="searchPlaceholder"
+          placeholder="Digite o nome da tabela ou enum..."
+        />
+      </div>
+      <div id="search-results-list" class="search-results-list"></div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script defer src="js/i18n.js"></script>
+  <script defer src="js/samples.js"></script>
+  <script defer src="js/dbml-parser.js"></script>
+  <script defer src="js/sql-converter.js"></script>
+  <script defer src="js/layout-engine.js"></script>
+  <script defer src="js/renderer.js"></script>
+  <script defer src="js/exporter.js"></script>
+  <script defer src="js/editor.js"></script>
+  <script defer src="js/app.js"></script>
+</body>
+</html>
