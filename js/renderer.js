@@ -125,7 +125,15 @@
 
     const y1 = srcPos.y + srcCol.yCenter;
     const y2 = dstPos.y + dstCol.yCenter;
-    const userOffset = (refOffsets && refOffsets[ref.key]) || 0;
+    const rawOffset = refOffsets && refOffsets[ref.key];
+    const userOffsetX =
+      typeof rawOffset === 'number'
+        ? rawOffset
+        : rawOffset && typeof rawOffset === 'object'
+          ? Number(rawOffset.dx) || 0
+          : 0;
+    const userOffsetY =
+      rawOffset && typeof rawOffset === 'object' ? Number(rawOffset.dy) || 0 : 0;
     const laneOffset = ((laneIndex % 5) - 2) * Math.max(8, Math.round(m.baseFont * 0.55));
     const lineStyle = settings.lineStyle || 'orthogonal';
 
@@ -162,13 +170,13 @@
         x2 = dstLeft;
         dir1 = -1;
         dir2 = -1;
-        midX = srcLeft - reach + userOffset;
+        midX = srcLeft - reach + userOffsetX;
       } else {
         x1 = srcRight;
         x2 = dstRight;
         dir1 = 1;
         dir2 = 1;
-        midX = srcRight + reach + userOffset;
+        midX = srcRight + reach + userOffsetX;
       }
       midY = (y1 + y2) / 2;
     } else if (srcRight + 26 <= dstLeft) {
@@ -176,14 +184,20 @@
       x2 = dstLeft;
       dir1 = 1;
       dir2 = -1;
-      midX = (x1 + x2) / 2 + laneOffset + userOffset;
+      midX = (x1 + x2) / 2 + laneOffset + userOffsetX;
+      if (lineStyle !== 'bezier') {
+        midX = Math.max(x1 + 12, Math.min(x2 - 12, midX));
+      }
       midY = (y1 + y2) / 2;
     } else if (dstRight + 26 <= srcLeft) {
       x1 = srcLeft;
       x2 = dstRight;
       dir1 = -1;
       dir2 = 1;
-      midX = (x1 + x2) / 2 + laneOffset + userOffset;
+      midX = (x1 + x2) / 2 + laneOffset + userOffsetX;
+      if (lineStyle !== 'bezier') {
+        midX = Math.max(x2 + 12, Math.min(x1 - 12, midX));
+      }
       midY = (y1 + y2) / 2;
     } else {
       // Overlapping horizontally: choose unobstructed outer corridor (left vs right)
@@ -195,22 +209,38 @@
       const rightBlocked = isCorridorBlocked(rightCand, y1, y2);
       const leftBlocked = isCorridorBlocked(leftCand, y1, y2);
 
-      const preferLeft =
-        userOffset < -40 ||
-        (userOffset === 0 && !leftBlocked && (rightBlocked || Math.abs(srcLeft - dstLeft) <= Math.abs(srcRight - dstRight)));
+      const basePreferLeft =
+        !leftBlocked &&
+        (rightBlocked || Math.abs(srcLeft - dstLeft) <= Math.abs(srcRight - dstRight));
 
-      if (preferLeft) {
-        x1 = srcLeft;
-        x2 = dstLeft;
-        dir1 = -1;
-        dir2 = -1;
-        midX = leftCand + (userOffset < -40 ? userOffset + 40 : userOffset);
+      if (basePreferLeft) {
+        if (leftCand + userOffsetX > (srcLeft + srcRight) / 2) {
+          x1 = srcRight;
+          x2 = dstRight;
+          dir1 = 1;
+          dir2 = 1;
+          midX = leftCand + userOffsetX;
+        } else {
+          x1 = srcLeft;
+          x2 = dstLeft;
+          dir1 = -1;
+          dir2 = -1;
+          midX = leftCand + userOffsetX;
+        }
       } else {
-        x1 = srcRight;
-        x2 = dstRight;
-        dir1 = 1;
-        dir2 = 1;
-        midX = rightCand + userOffset;
+        if (rightCand + userOffsetX < (srcLeft + srcRight) / 2) {
+          x1 = srcLeft;
+          x2 = dstLeft;
+          dir1 = -1;
+          dir2 = -1;
+          midX = rightCand + userOffsetX;
+        } else {
+          x1 = srcRight;
+          x2 = dstRight;
+          dir1 = 1;
+          dir2 = 1;
+          midX = rightCand + userOffsetX;
+        }
       }
       midY = (y1 + y2) / 2;
     }
@@ -220,27 +250,58 @@
     const dy = y2 - y1;
 
     if (lineStyle === 'bezier') {
+      const cy1 = y1 + userOffsetY * 1.333;
+      const cy2 = y2 + userOffsetY * 1.333;
       if (dir1 !== dir2) {
         const span = Math.max(52, Math.abs(midX - x1), Math.abs(x2 - midX));
         const cx1 = x1 + dir1 * span;
         const cx2 = x2 + dir2 * span;
-        pathD = `M ${x1} ${y1} C ${cx1} ${y1}, ${cx2} ${y2}, ${x2} ${y2}`;
-        // Bezier midpoint at t=0.5
+        pathD = `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`;
         midX = 0.125 * x1 + 0.375 * cx1 + 0.375 * cx2 + 0.125 * x2;
+        midY = 0.125 * y1 + 0.375 * cy1 + 0.375 * cy2 + 0.125 * y2;
       } else {
         const loopReach = Math.max(60, Math.abs(midX - Math.min(x1, x2)) * 1.25);
         const cx1 = x1 + dir1 * loopReach;
         const cx2 = x2 + dir2 * loopReach;
-        pathD = `M ${x1} ${y1} C ${cx1} ${y1}, ${cx2} ${y2}, ${x2} ${y2}`;
+        pathD = `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`;
         midX = 0.125 * x1 + 0.375 * cx1 + 0.375 * cx2 + 0.125 * x2;
+        midY = 0.125 * y1 + 0.375 * cy1 + 0.375 * cy2 + 0.125 * y2;
       }
     } else {
-      // Orthogonal rounded elbow
+      // Orthogonal rounded elbow (or 5-segment bridge when dragged vertically)
       const dyAbs = Math.abs(dy);
-      if (dir1 !== dir2 && dyAbs < 2 && Math.abs(userOffset) < 2) {
+      if (dir1 !== dir2 && Math.abs(userOffsetY) >= 4) {
+        const bridgeY = (y1 + y2) / 2 + userOffsetY;
+        const spanX = Math.abs(x2 - x1);
+        const stub = Math.min(28, Math.max(12, spanX * 0.22));
+        const turnX1 = x1 + dir1 * stub;
+        const turnX2 = x2 + dir2 * stub;
+        const signX1 = turnX1 >= x1 ? 1 : -1;
+        const signXBridge = turnX2 >= turnX1 ? 1 : -1;
+        const signX2 = x2 >= turnX2 ? 1 : -1;
+        const dy1 = bridgeY - y1;
+        const dy2 = y2 - bridgeY;
+        const signY1 = dy1 >= 0 ? 1 : -1;
+        const signY2 = dy2 >= 0 ? 1 : -1;
+        const r1 = Math.min(9, Math.abs(turnX1 - x1) / 2, Math.abs(dy1) / 2, Math.abs(turnX2 - turnX1) / 2);
+        const r2 = Math.min(9, Math.abs(x2 - turnX2) / 2, Math.abs(dy2) / 2, Math.abs(turnX2 - turnX1) / 2);
+
+        const seg1 =
+          r1 >= 1.2
+            ? `M ${x1} ${y1} L ${turnX1 - signX1 * r1} ${y1} Q ${turnX1} ${y1} ${turnX1} ${y1 + signY1 * r1} ` +
+              `L ${turnX1} ${bridgeY - signY1 * r1} Q ${turnX1} ${bridgeY} ${turnX1 + signXBridge * r1} ${bridgeY} `
+            : `M ${x1} ${y1} L ${turnX1} ${y1} L ${turnX1} ${bridgeY} `;
+        const seg2 =
+          r2 >= 1.2
+            ? `L ${turnX2 - signXBridge * r2} ${bridgeY} Q ${turnX2} ${bridgeY} ${turnX2} ${bridgeY + signY2 * r2} ` +
+              `L ${turnX2} ${y2 - signY2 * r2} Q ${turnX2} ${y2} ${turnX2 + signX2 * r2} ${y2} L ${x2} ${y2}`
+            : `L ${turnX2} ${bridgeY} L ${turnX2} ${y2} L ${x2} ${y2}`;
+        pathD = seg1 + seg2;
+        midX = (turnX1 + turnX2) / 2;
+        midY = bridgeY;
+      } else if (dir1 !== dir2 && dyAbs < 2 && Math.abs(userOffsetX) < 2) {
         pathD = `M ${x1} ${y1} L ${x2} ${y2}`;
       } else if (dir1 !== dir2) {
-        // Ensure midX does not invert awkwardly when tables are close
         const r = Math.min(
           10,
           dyAbs / 2,
@@ -311,6 +372,8 @@
       y1,
       x2,
       y2,
+      dir1,
+      dir2,
       midX,
       midY,
       pathD,
@@ -439,18 +502,23 @@
       const refGroup = svgEl(doc, 'g', {
         class: 'diagram-ref' + (isHighlighted ? ' is-highlighted' : '') + (isDimmed ? ' is-dimmed' : ''),
         'data-ref-key': ref.key,
+        'data-same-side': geom.dir1 === geom.dir2 ? '1' : '0',
+        'data-flat': Math.abs(geom.y2 - geom.y1) < 12 ? '1' : '0',
         'data-from': ref.fromTable + '.' + ref.fromColumn,
         'data-to': ref.toTable + '.' + ref.toColumn
       });
 
-      // Invisible wide hit path for easy hovering on screen
+      // Invisible wide hit path for easy clicking/dragging anywhere along the line
       if (!isExport) {
         refGroup.appendChild(
           svgEl(doc, 'path', {
             d: geom.pathD,
             fill: 'none',
             stroke: 'transparent',
-            'stroke-width': 14,
+            'stroke-width': 18,
+            'stroke-linecap': 'round',
+            'stroke-linejoin': 'round',
+            'pointer-events': 'stroke',
             class: 'ref-hit-area'
           })
         );
