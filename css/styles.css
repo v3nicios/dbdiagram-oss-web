@@ -541,8 +541,13 @@ html[data-theme="light"] .error-item {
   cursor: grab;
   user-select: none;
 }
-.diagram-svg.is-panning {
+.diagram-svg.is-panning,
+.diagram-svg.is-dragging-ref {
   cursor: grabbing;
+}
+
+.diagram-ref {
+  cursor: grab;
 }
 
 .table-drag-handle,
@@ -559,7 +564,7 @@ html[data-theme="light"] .error-item {
   opacity: 1;
 }
 .ref-midpoint-handle {
-  cursor: ew-resize;
+  cursor: grab;
   opacity: 0;
   transition: opacity 0.14s;
 }

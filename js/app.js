@@ -1024,18 +1024,46 @@
         return;
       }
 
-      // Ref midpoint drag
-      const refHandle = e.target.closest('.ref-midpoint-handle');
-      if (refHandle && e.button === 0) {
+      // Drag relationship line from ANY point along the line
+      const refTarget = e.target.closest('.diagram-ref');
+      if (refTarget && e.button === 0) {
         e.stopPropagation();
-        const refKey = refHandle.getAttribute('data-ref-key');
+        const refKey = refTarget.getAttribute('data-ref-key');
+        const existing = state.refOffsets[refKey];
+        const initialDx =
+          typeof existing === 'number'
+            ? existing
+            : existing && typeof existing === 'object'
+              ? Number(existing.dx) || 0
+              : 0;
+        const initialDy =
+          existing && typeof existing === 'object' ? Number(existing.dy) || 0 : 0;
+
+        const needsHighlightRender = state.hoveredRefKey !== refKey;
+        state.hoveredRefKey = refKey;
         activeDrag = {
           kind: 'ref',
           refKey,
           startX: e.clientX,
-          initialOffset: state.refOffsets[refKey] || 0
+          startY: e.clientY,
+          initialDx,
+          initialDy,
+          sameSide: refTarget.getAttribute('data-same-side') === '1',
+          isFlat: refTarget.getAttribute('data-flat') === '1',
+          axisLock:
+            state.settings.lineStyle === 'bezier'
+              ? 'xy'
+              : refTarget.getAttribute('data-same-side') === '1'
+                ? 'x'
+                : initialDy !== 0
+                  ? 'y'
+                  : null
         };
-        svg.setPointerCapture(e.pointerId);
+        svg.classList.add('is-dragging-ref');
+        try {
+          svg.setPointerCapture(e.pointerId);
+        } catch (_err) {}
+        if (needsHighlightRender) renderDiagramOnly();
         return;
       }
 
@@ -1139,8 +1167,31 @@
           state.hasCustomLayout = true;
           renderDiagramOnly();
         } else if (activeDrag.kind === 'ref') {
-          const dx = (e.clientX - activeDrag.startX) / state.viewport.zoom;
-          state.refOffsets[activeDrag.refKey] = Math.round(activeDrag.initialOffset + dx);
+          const moveX = (e.clientX - activeDrag.startX) / state.viewport.zoom;
+          const moveY = (e.clientY - activeDrag.startY) / state.viewport.zoom;
+
+          if (!activeDrag.axisLock) {
+            if (activeDrag.isFlat && Math.abs(moveY) >= 4 && Math.abs(moveY) >= Math.abs(moveX)) {
+              activeDrag.axisLock = 'y';
+            } else if (Math.hypot(moveX, moveY) >= 5) {
+              activeDrag.axisLock = Math.abs(moveY) > Math.abs(moveX) * 1.15 ? 'y' : 'x';
+            }
+          }
+
+          let dx = activeDrag.initialDx;
+          let dy = activeDrag.initialDy;
+
+          if (activeDrag.axisLock === 'xy') {
+            dx = Math.round(activeDrag.initialDx + moveX);
+            dy = Math.round(activeDrag.initialDy + moveY);
+          } else if (activeDrag.axisLock === 'y') {
+            const nextDy = Math.round(activeDrag.initialDy + moveY);
+            dy = Math.abs(nextDy) < 5 ? 0 : nextDy;
+          } else if (activeDrag.axisLock === 'x' || Math.abs(moveX) >= 2) {
+            dx = Math.round(activeDrag.initialDx + moveX);
+          }
+
+          state.refOffsets[activeDrag.refKey] = { dx, dy };
           renderDiagramOnly();
         }
         return;
@@ -1234,7 +1285,7 @@
     svg.addEventListener('pointerup', (e) => {
       if (activeDrag) {
         activeDrag = null;
-        svg.classList.remove('is-panning');
+        svg.classList.remove('is-panning', 'is-dragging-ref');
         try {
           svg.releasePointerCapture(e.pointerId);
         } catch (_err) {}
@@ -1253,9 +1304,9 @@
     });
 
     svg.addEventListener('dblclick', (e) => {
-      const refHandle = e.target.closest('.ref-midpoint-handle');
-      if (refHandle) {
-        const key = refHandle.getAttribute('data-ref-key');
+      const refTarget = e.target.closest('.diagram-ref');
+      if (refTarget) {
+        const key = refTarget.getAttribute('data-ref-key');
         delete state.refOffsets[key];
         renderDiagramOnly();
         saveState();
