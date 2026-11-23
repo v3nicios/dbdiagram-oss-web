@@ -36,14 +36,6 @@ Não precisa instalar nada nem rodar servidor de build:
 1. Clone ou baixe este repositório.
 2. Abra o arquivo `index.html` diretamente no navegador (ou sirva com qualquer servidor estático, como `npx serve .` ou Live Server).
 
-### Publicar no GitHub Pages
-1. Suba os arquivos para um repositório no GitHub.
-2. Acesse **Settings → Pages**.
-3. Em **Build and deployment**, selecione **Deploy from a branch** (`main` / `/ (root)`).
-4. Em poucos segundos seu editor estará online gratuitamente!
-
----
-
 ## Estrutura do Projeto
 
 ```text
