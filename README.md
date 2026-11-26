@@ -28,6 +28,8 @@ Inspirado no [dbdiagram.io](https://dbdiagram.io) e no [TruDan/dbdiagram-oss](ht
   - **Exportar:** **PNG** (1x exato / 2x / 3x + fundo claro/escuro/transparente), **SVG** vetorial puro, **PDF** nativo, **SQL** (PostgreSQL, MySQL, SQLite), **DBML** e **JSON**.
 
 ---
+![alt text](e-commerce-completo.png)
+![alt text](<blogue e comunidade.png>)
 
 ## Como Usar
 
